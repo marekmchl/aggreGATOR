@@ -1,11 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
+	_ "github.com/lib/pq" // imported for side effects
+
 	"github.com/marekmchl/aggreGATOR/internal/cli"
 	"github.com/marekmchl/aggreGATOR/internal/config"
+	"github.com/marekmchl/aggreGATOR/internal/database"
 	"github.com/marekmchl/aggreGATOR/internal/state"
 )
 
@@ -16,9 +20,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	db, err := sql.Open("postgres", cfg.DbURL)
+	if err != nil {
+		fmt.Printf("failed - %v", err)
+		os.Exit(1)
+	}
+
 	sta := &state.State{
 		Config: &cfg,
 	}
+
+	dbQueries := database.New(db)
+	sta.DB = dbQueries
 
 	args := os.Args[1:]
 	if len(args) <= 0 {

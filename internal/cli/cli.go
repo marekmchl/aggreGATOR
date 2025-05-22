@@ -16,6 +16,7 @@ func GetCommands() commands {
 		commandMap: make(map[string]func(*state.State, Command) error, 1),
 	}
 	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerRegister)
 
 	return cmds
 }
