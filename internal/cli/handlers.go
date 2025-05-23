@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/marekmchl/aggreGATOR/internal/database"
+	"github.com/marekmchl/aggreGATOR/internal/rss"
 	"github.com/marekmchl/aggreGATOR/internal/state"
 )
 
@@ -64,5 +65,14 @@ func handlerUsers(s *state.State, cmd Command) error {
 			fmt.Println(user.Name)
 		}
 	}
+	return nil
+}
+
+func handlerAgg(s *state.State, cmd Command) error {
+	feed, err := rss.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return fmt.Errorf("aggregation unsuccessful - %v", err)
+	}
+	fmt.Println(feed)
 	return nil
 }
