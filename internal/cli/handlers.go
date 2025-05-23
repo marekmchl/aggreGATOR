@@ -99,3 +99,14 @@ func handlerAddfeed(s *state.State, cmd Command) error {
 	fmt.Println(feed)
 	return nil
 }
+
+func handlerFeeds(s *state.State, cmd Command) error {
+	feeds, err := s.DB.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("getting feeds unsuccessful - %v", err)
+	}
+	for _, feed := range feeds {
+		fmt.Printf("%v | %v | %v\n", feed.FeedName, feed.Url, feed.UserName)
+	}
+	return nil
+}
