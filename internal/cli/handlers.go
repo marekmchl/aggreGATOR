@@ -14,6 +14,10 @@ func handlerLogin(s *state.State, cmd Command) error {
 	if len(cmd.Args) <= 0 {
 		return fmt.Errorf("command login requires a username")
 	}
+	_, err := s.DB.GetUser(context.Background(), cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("user not found")
+	}
 	s.Config.SetUser(cmd.Args[0])
 	fmt.Println("success - the new user has been set")
 	return nil
@@ -38,5 +42,27 @@ func handlerRegister(s *state.State, cmd Command) error {
 	s.Config.SetUser(cmd.Args[0])
 
 	fmt.Println("success - the new user has been registered")
+	return nil
+}
+
+func handlerReset(s *state.State, cmd Command) error {
+	if err := s.DB.DeleteAllUsers(context.Background()); err != nil {
+		return fmt.Errorf("resetting users was unsuccessful - %v", err)
+	}
+	return nil
+}
+
+func handlerUsers(s *state.State, cmd Command) error {
+	users, err := s.DB.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("getting users unsuccessful - %v", err)
+	}
+	for _, user := range users {
+		if user.Name == s.Config.CurrentUserName {
+			fmt.Printf("%v (current)\n", user.Name)
+		} else {
+			fmt.Println(user.Name)
+		}
+	}
 	return nil
 }
