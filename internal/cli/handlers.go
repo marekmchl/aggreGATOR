@@ -96,6 +96,14 @@ func handlerAddfeed(s *state.State, cmd Command) error {
 	if err != nil {
 		return fmt.Errorf("couldn't add feed - %v", err)
 	}
+
+	if err := handlerFollow(s, Command{
+		Name: "follow",
+		Args: []string{feed.Url},
+	}); err != nil {
+		return fmt.Errorf("couldn't create a follow - %v", err)
+	}
+
 	fmt.Println(feed)
 	return nil
 }
@@ -107,6 +115,51 @@ func handlerFeeds(s *state.State, cmd Command) error {
 	}
 	for _, feed := range feeds {
 		fmt.Printf("%v | %v | %v\n", feed.FeedName, feed.Url, feed.UserName)
+	}
+	return nil
+}
+
+func handlerFollow(s *state.State, cmd Command) error {
+	if len(cmd.Args) < 1 {
+		return fmt.Errorf("command follow needs url")
+	}
+
+	user, err := s.DB.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("getting user info unsuccessful - %v", err)
+	}
+
+	feed, err := s.DB.GetFeed(context.Background(), cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("getting feed info unsuccessful - %v", err)
+	}
+
+	feedFollow, err := s.DB.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("creating follow was unsuccessful - %v", err)
+	}
+
+	fmt.Printf("%v | %v", feedFollow.FeedName, feedFollow.UserName)
+	return nil
+}
+
+func handlerFollowing(s *state.State, cmd Command) error {
+	user, err := s.DB.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("getting user info was unsuccessful - %v", err)
+	}
+	feeds, err := s.DB.GetFeedFollowsForUser(context.Background(), user.ID)
+	if err != nil {
+		return fmt.Errorf("getting user's feeds was unsuccessful - %v", err)
+	}
+	for _, feed := range feeds {
+		fmt.Printf("%v\n", feed.FeedName)
 	}
 	return nil
 }
