@@ -77,13 +77,9 @@ func handlerAgg(s *state.State, cmd Command) error {
 	return nil
 }
 
-func handlerAddfeed(s *state.State, cmd Command) error {
+func handlerAddfeed(s *state.State, cmd Command, user database.User) error {
 	if len(cmd.Args) < 2 {
 		return fmt.Errorf("addfeed needs both the feed name and url")
-	}
-	current_user, err := s.DB.GetUser(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("couldn't add feed - %v", err)
 	}
 	feed, err := s.DB.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),
@@ -91,7 +87,7 @@ func handlerAddfeed(s *state.State, cmd Command) error {
 		UpdatedAt: time.Now(),
 		Name:      cmd.Args[0],
 		Url:       cmd.Args[1],
-		UserID:    current_user.ID,
+		UserID:    user.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("couldn't add feed - %v", err)
@@ -100,7 +96,7 @@ func handlerAddfeed(s *state.State, cmd Command) error {
 	if err := handlerFollow(s, Command{
 		Name: "follow",
 		Args: []string{feed.Url},
-	}); err != nil {
+	}, user); err != nil {
 		return fmt.Errorf("couldn't create a follow - %v", err)
 	}
 
@@ -119,14 +115,9 @@ func handlerFeeds(s *state.State, cmd Command) error {
 	return nil
 }
 
-func handlerFollow(s *state.State, cmd Command) error {
+func handlerFollow(s *state.State, cmd Command, user database.User) error {
 	if len(cmd.Args) < 1 {
 		return fmt.Errorf("command follow needs url")
-	}
-
-	user, err := s.DB.GetUser(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("getting user info unsuccessful - %v", err)
 	}
 
 	feed, err := s.DB.GetFeed(context.Background(), cmd.Args[0])
@@ -149,11 +140,7 @@ func handlerFollow(s *state.State, cmd Command) error {
 	return nil
 }
 
-func handlerFollowing(s *state.State, cmd Command) error {
-	user, err := s.DB.GetUser(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("getting user info was unsuccessful - %v", err)
-	}
+func handlerFollowing(s *state.State, cmd Command, user database.User) error {
 	feeds, err := s.DB.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
 		return fmt.Errorf("getting user's feeds was unsuccessful - %v", err)
