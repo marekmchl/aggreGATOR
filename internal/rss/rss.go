@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/marekmchl/aggreGATOR/internal/database"
 	"github.com/marekmchl/aggreGATOR/internal/state"
 )
@@ -59,6 +60,39 @@ func FetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return data, nil
 }
 
+func parseTime(timeString string) (time.Time, error) {
+	pubTime, err := time.Parse(time.RFC1123, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+	pubTime, err = time.Parse(time.RFC1123Z, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+	pubTime, err = time.Parse(time.RFC3339, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+	pubTime, err = time.Parse(time.RFC822, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+	pubTime, err = time.Parse(time.RFC822Z, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+	pubTime, err = time.Parse(time.RFC850, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+	pubTime, err = time.Parse(time.RFC3339Nano, timeString)
+	if err == nil {
+		return pubTime, nil
+	}
+
+	return time.Time{}, fmt.Errorf("unsupported time format")
+}
+
 func ScrapeFeeds(s *state.State) error {
 	feed, err := s.DB.GetNextFeedToFetch(context.Background())
 	if err != nil {
@@ -76,9 +110,23 @@ func ScrapeFeeds(s *state.State) error {
 		return fmt.Errorf("fetching the feed was unsuccessful - %v", err)
 	}
 	for _, rssItem := range rssFeed.Channel.Item {
-		// fmt.Printf("%v (%v, %v)\n%v\n", rssItem.Title, rssItem.PubDate, rssItem.Link, rssItem.Description)
-		fmt.Printf("%v (%v, %v)\n%v\n", html.UnescapeString(strings.TrimSpace(rssItem.Title)), rssItem.PubDate, rssItem.Link, html.UnescapeString(strings.TrimSpace(rssItem.Description)))
-		fmt.Println()
+		pubTime, err := parseTime(rssItem.PubDate)
+		if err != nil {
+			return fmt.Errorf("parsing time was unsuccessful - %v", err)
+		}
+		_, err = s.DB.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       html.UnescapeString(strings.TrimSpace(rssItem.Title)),
+			Url:         rssItem.Link,
+			Description: html.UnescapeString(strings.TrimSpace(rssItem.Description)),
+			PublishedAt: pubTime,
+			FeedID:      feed.ID,
+		})
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate key value violates unique constraint \"posts_url_key\"") {
+			return fmt.Errorf("creating post was unsuccessful - %v", err)
+		}
 	}
 	return nil
 }

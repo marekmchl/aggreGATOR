@@ -3,7 +3,11 @@ package cli
 import (
 	"context"
 	"fmt"
+	"html"
+	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/marekmchl/aggreGATOR/internal/database"
@@ -82,7 +86,9 @@ func handlerAgg(s *state.State, cmd Command) error {
 
 	ticker := time.NewTicker(durationBetweenReqs)
 	for ; ; <-ticker.C {
-		rss.ScrapeFeeds(s)
+		if err := rss.ScrapeFeeds(s); err != nil {
+			return fmt.Errorf("feed scraping was unsuccessful - %v", err)
+		}
 	}
 }
 
@@ -178,5 +184,37 @@ func handlerUnfollow(s *state.State, cmd Command, user database.User) error {
 		return fmt.Errorf("couldn't unfollow - %v", err)
 	}
 
+	return nil
+}
+
+func handlerBrowse(s *state.State, cmd Command, user database.User) error {
+	limit := int32(2)
+	if len(cmd.Args) > 0 {
+		isNumber := true
+		for _, symbol := range []rune(cmd.Args[0]) {
+			if !unicode.IsNumber(symbol) {
+				isNumber = false
+				break
+			}
+		}
+		if isNumber {
+			argNum, err := strconv.Atoi(cmd.Args[0])
+			if err == nil {
+				limit = int32(argNum)
+			}
+		}
+	}
+
+	posts, err := s.DB.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  limit,
+	})
+	if err != nil {
+		return fmt.Errorf("getting posts unsuccessful - %v", err)
+	}
+	for _, post := range posts {
+		fmt.Printf("%v (%v, %v)\n%v\n", html.UnescapeString(strings.TrimSpace(post.Title)), post.PublishedAt, post.Url, html.UnescapeString(strings.TrimSpace(post.Description)))
+		fmt.Println()
+	}
 	return nil
 }
