@@ -53,8 +53,8 @@ func FetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 		return &RSSFeed{}, fmt.Errorf("fetching failed - %v", err)
 	}
 
-	data.Channel.Title = html.UnescapeString(strings.TrimSpace(data.Channel.Title))
-	data.Channel.Description = html.UnescapeString(strings.TrimSpace(data.Channel.Description))
+	// data.Channel.Title = html.UnescapeString(strings.TrimSpace(data.Channel.Title))
+	// data.Channel.Description = html.UnescapeString(strings.TrimSpace(data.Channel.Description))
 
 	return data, nil
 }
@@ -76,7 +76,8 @@ func ScrapeFeeds(s *state.State) error {
 		return fmt.Errorf("fetching the feed was unsuccessful - %v", err)
 	}
 	for _, rssItem := range rssFeed.Channel.Item {
-		fmt.Printf("%v (%v, %v)\n%v\n", rssItem.Title, rssItem.PubDate, rssItem.Link, rssItem.Description)
+		// fmt.Printf("%v (%v, %v)\n%v\n", rssItem.Title, rssItem.PubDate, rssItem.Link, rssItem.Description)
+		fmt.Printf("%v (%v, %v)\n%v\n", html.UnescapeString(strings.TrimSpace(rssItem.Title)), rssItem.PubDate, rssItem.Link, html.UnescapeString(strings.TrimSpace(rssItem.Description)))
 		fmt.Println()
 	}
 	return nil
