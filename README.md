@@ -41,7 +41,7 @@ The application requires a configuration file named `gatorconfig.json` located i
 
 Replace `username` and `password` with your PostgreSQL credentials.
 
-## 🧪 Usage
+## Usage
 
 * **Register a new user:**
 
