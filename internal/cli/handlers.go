@@ -69,12 +69,21 @@ func handlerUsers(s *state.State, cmd Command) error {
 }
 
 func handlerAgg(s *state.State, cmd Command) error {
-	feed, err := rss.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("aggregation unsuccessful - %v", err)
+	if len(cmd.Args) < 1 {
+		return fmt.Errorf("command agg needs a duration string as an argument")
 	}
-	fmt.Println(feed)
-	return nil
+	timeBetweenReqs := cmd.Args[0]
+
+	durationBetweenReqs, err := time.ParseDuration(timeBetweenReqs)
+	if err != nil {
+		return fmt.Errorf("parsing time string failed - %v", err)
+	}
+	fmt.Printf("Collecting feeds every %v\n", timeBetweenReqs)
+
+	ticker := time.NewTicker(durationBetweenReqs)
+	for ; ; <-ticker.C {
+		rss.ScrapeFeeds(s)
+	}
 }
 
 func handlerAddfeed(s *state.State, cmd Command, user database.User) error {

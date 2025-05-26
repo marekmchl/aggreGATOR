@@ -7,6 +7,10 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/marekmchl/aggreGATOR/internal/database"
+	"github.com/marekmchl/aggreGATOR/internal/state"
 )
 
 type RSSFeed struct {
@@ -52,4 +56,28 @@ func FetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	data.Channel.Description = html.UnescapeString(data.Channel.Description)
 
 	return data, nil
+}
+
+func ScrapeFeeds(s *state.State) error {
+	feed, err := s.DB.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("getting the feed was unsuccessful - %v", err)
+	}
+	feed, err = s.DB.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
+		ID:        feed.ID,
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("marking the feed as fetched was unsuccessful - %v", err)
+	}
+	rssFeed, err := FetchFeed(context.Background(), feed.Url)
+	if err != nil {
+		return fmt.Errorf("fetching the feed was unsuccessful - %v", err)
+	}
+	for _, rssItem := range rssFeed.Channel.Item {
+		fmt.Printf("%v (%v, %v)\n", rssItem.Title, rssItem.PubDate, rssItem.Link)
+		fmt.Println(rssItem.Description)
+		fmt.Println()
+	}
+	return nil
 }
